@@ -1,0 +1,85 @@
+---
+title: "Impacto do sono em alunos de graduação e pós-graduação"
+output: 
+    html_document:
+    df_print: paged
+theme: sandstone
+---
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+theme_set(theme_bw())
+
+library(boot)
+library(broom)
+
+knitr::opts_chunk$set(tidy = FALSE,
+                      fig.width = 6,
+                      fig.height = 5)
+
+```
+
+```{r read}
+dados = read_csv(here::here("data/sono.csv"),
+                 col_types = "ccdd") 
+dados = dados %>%
+rename(
+sono_semana = `Quantas horas por noite você dorme DURANTE A SEMANA em média?`,
+sono_fds = `Quantas horas por noite você dorme durante NO FIM DE SEMANA em média?`
+)
+glimpse(dados)
+```
+
+
+
+```{r}
+dados %>% 
+    
+ggplot(aes(x = sono_semana)) + 
+  facet_wrap(~ Curso) + 
+  geom_histogram(binwidth =1, boundary = .5) + 
+  geom_rug()
+```
+
+```{r}
+dados %>% 
+    ggplot(aes(x = sono_fds)) + 
+        facet_wrap(~ Curso) + 
+        geom_histogram(binwidth =1, boundary = .5) + 
+        geom_rug()
+```
+
+#1. Qual o tamanho do impacto do curso no sono dos alunos de graduação e de pós graduação?
+
+```{r}
+dados = dados %>% 
+    mutate(impacto = sono_fds - sono_semana) 
+    
+glimpse(dados)
+```
+
+```{r}
+dados %>% 
+summarise(media_semana = mean(sono_semana),
+              media_fds = mean(sono_fds),
+              media_impacto = mean(impacto))
+```
+
+
+```{r}
+comparacao_sono = dados 
+#%>% 
+#    filter(scenario %in% c("baseline", "skip"))
+
+theta_sono <- function(d, i) {
+    agrupado = d %>% 
+        slice(i) %>% 
+        summarise(media_semana = mean(sono_semana),
+              media_fds = mean(sono_fds),
+              media_impacto = mean(impacto))
+    s - b
+}
+
+theta_sb(comparacao_sb, i = 1:NROW(comparacao_sb))
+```
+
