@@ -30,7 +30,10 @@ sono_fds = `Quantas horas por noite você dorme durante NO FIM DE SEMANA em méd
 glimpse(dados)
 ```
 
+O experimento consistem em avaliar as horas de sono de estudantes de graduação e pós-graduação. Para isso foi aplicado um questionário onde o aluno deveria responder quantas horas ele dorne em um dia de semana e em um dia de final de semana. O questionário foi aplicado em duas turmas: uma de graduação (CDD) e outra de pós-graduação (FPCC).
 
+
+AAs figuras 1 e 2, abaixo, apresenta a distribuição das respostas de cada turma:
 
 ```{r}
 dados %>% 
@@ -38,18 +41,28 @@ dados %>%
 ggplot(aes(x = sono_semana)) + 
   facet_wrap(~ Curso) + 
   geom_histogram(binwidth =1, boundary = .5) + 
+  ggtitle("Figura 1: Horas de sono por dia na semana") +
   geom_rug()
 ```
+
+A distribuição...... Comentar distribuição?
+
 
 ```{r}
 dados %>% 
     ggplot(aes(x = sono_fds)) + 
         facet_wrap(~ Curso) + 
         geom_histogram(binwidth =1, boundary = .5) + 
+        ggtitle("Figura 2: Horas de sono por dia no final de semana") +
         geom_rug()
 ```
 
+A distribuição...... Comentar distribuição?
+
+A partir da amostra coletada pelos questionários, queremos inferir o impacto, no sono dos alunos, do curso que estão realizando (graduação ou pós-graduação). Será que os cursos de formação superior, pela exigência das atividades, têm impacto no sono dos alunos? Por frequentarem um curso de formação mais avançado, os alunos de pós-graduação dormem menos que os de graduação? Esperamos responder estas questões a partir de intervalos de confiança gerados pelo método de bootstrap aplicado à amostra coletada.  
+
 #1. Qual o tamanho do impacto do curso no sono dos alunos de graduação e de pós graduação?
+
 
 ```{r}
 dados = dados %>% 
@@ -59,27 +72,112 @@ glimpse(dados)
 ```
 
 ```{r}
-dados %>% 
-summarise(media_semana = mean(sono_semana),
-              media_fds = mean(sono_fds),
-              media_impacto = mean(impacto))
+calc_media = dados %>% 
+group_by(Curso) %>% 
+  summarise(
+            media_semana = mean(sono_semana),
+            media_fds = mean(sono_fds),
+            media_impacto = mean(impacto)
+            ) 
+glimpse(calc_media)
+
+   # g = calc_media %>% filter(Curso == "CDD") %>%  pull(media_impacto)
+  #  p = calc_media %>% filter(Curso == "FPCC") %>% pull(media_impacto)
+  #  g - p
+```
+
+Analisando as médias na amostra coletada, podemos perceber que os alunos de graduação das disciplinas CDD e FPCC têm horas de sono equivalentes.....
+
+```{r}
+
+calc_media = dados 
+
+theta_sonog <- function(d, i) {
+    agrupado = d %>% 
+        slice(i) %>% 
+        group_by(Curso) %>% 
+        summarise(media_impacto = mean(impacto))
+    g = agrupado %>% filter(Curso == "CDD") %>% pull(media_impacto)
+    #p = agrupado %>% filter(Curso == "FPCC") %>% pull(media_impacto)
+    #g - p
+    g
+}
+
+theta_sonog(calc_media, i = 1:NROW(calc_media))
 ```
 
 
 ```{r}
-comparacao_sono = dados 
-#%>% 
-#    filter(scenario %in% c("baseline", "skip"))
+ci_sonog = boot(data = calc_media,
+           statistic = theta_sonog,
+           R = 2000) %>%
+    tidy(conf.level = .95,
+         conf.method = "bca",
+         conf.int = TRUE)
+
+ci_sonog
+```
+
+
+```{r}
+calc_media = dados 
+
+theta_sonop <- function(d, i) {
+    agrupado = d %>% 
+        slice(i) %>% 
+        group_by(Curso) %>% 
+        summarise(media_impacto = mean(impacto))
+    #g = agrupado %>% filter(Curso == "CDD") %>% pull(media_impacto)
+    p = agrupado %>% filter(Curso == "FPCC") %>% pull(media_impacto)
+    #g - p
+    p
+}
+
+theta_sonop(calc_media, i = 1:NROW(calc_media))
+```
+
+
+
+```{r}
+ci_sonop = boot(data = calc_media,
+           statistic = theta_sonop,
+           R = 2000) %>%
+    tidy(conf.level = .95,
+         conf.method = "bca",
+         conf.int = TRUE)
+
+ci_sonop
+```
+
+
+#2. Como se compara o impacto dos dois cursos?
+
+```{r}
+calc_media = dados 
 
 theta_sono <- function(d, i) {
     agrupado = d %>% 
         slice(i) %>% 
-        summarise(media_semana = mean(sono_semana),
-              media_fds = mean(sono_fds),
-              media_impacto = mean(impacto))
-    s - b
+        group_by(Curso) %>% 
+        summarise(media_impacto = mean(impacto))
+    g = agrupado %>% filter(Curso == "CDD") %>% pull(media_impacto)
+    p = agrupado %>% filter(Curso == "FPCC") %>% pull(media_impacto)
+    g - p
+    
 }
 
-theta_sb(comparacao_sb, i = 1:NROW(comparacao_sb))
+theta_sono(calc_media, i = 1:NROW(calc_media))
+```
+
+
+```{r}
+ci_sono = boot(data = calc_media,
+           statistic = theta_sono,
+           R = 2000) %>%
+    tidy(conf.level = .95,
+         conf.method = "bca",
+         conf.int = TRUE)
+
+ci_sono
 ```
 
